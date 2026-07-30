@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* Design tokens — this replaces tailwind.config.ts under Tailwind v4.
+   Each --color-* here auto-generates the matching bg-/text-/border-*
+   utilities (bg-base, text-ink, border-border, etc.) used throughout
+   components/hmem. */
+@theme {
+  --color-base: #0b0e11;
+  --color-panel: #12161b;
+  --color-border: #232a31;
+  --color-ink: #e7ecef;
+  --color-muted: #8b98a5;
+  --color-signal: #e8a33d; /* coherence / adaptive-threshold accent */
+  --color-edge: #4fd1c5; /* graph edges / tool-token accent */
+  --color-danger: #e5484d;
+
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-base text-ink font-sans;
+  }
+
+  ::selection {
+    @apply bg-signal/30;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
