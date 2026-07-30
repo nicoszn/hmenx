@@ -3,9 +3,13 @@
 Four-tier memory system for a multi-agent LLM simulation, built to run on Vercel:
 
 - **Tier 1** — per-session working memory (sliding turn buffer + shared Workspace board)
-- **Tier 2** — vector index cache (`pgvector`, real embeddings via `@xenova/transformers`)
+- **Tier 2** — vector index cache (`pgvector`, real embeddings via `@huggingface/transformers`)
 - **Tier 3** — global semantic graph (weighted best-first retrieval, merge/prune consolidation)
 - **Tier 4** — skill/version registry with a Pareto non-regression promotion gate
+
+Stack, as of writing: Next.js 16.2 (App Router, Turbopack default), React 19.2, TypeScript 7
+(native Go compiler), Tailwind CSS v4 (CSS-first config, no `tailwind.config.ts`), Node.js 24.
+Check `npm outdated` before you deploy — these move fast enough that "current" has a shelf life.
 
 ## 1. Set up the database
 
@@ -30,12 +34,14 @@ Fill in:
 
 ## 3. Run locally
 
+Requires Node.js 24+ (`node -v` to check).
+
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The first turn will be slow (~seconds) — that's `@xenova/transformers` downloading and caching `all-MiniLM-L6-v2` on first use; subsequent turns are fast.
+Open `http://localhost:3000`. The first turn will be slow (~seconds) — that's `@huggingface/transformers` downloading and caching the embedding model on first use; subsequent turns are fast.
 
 ## 4. Seed the Tier 4 regression set (optional, only needed to use the promotion panel)
 
@@ -54,11 +60,15 @@ Add a handful of representative turns — the more they resemble real sessions, 
 
 1. Push this repo to GitHub, import it in Vercel.
 2. Add the three environment variables from step 2 in **Project Settings → Environment Variables**.
-3. Deploy.
+3. Set the project's Node.js version to 24.x in **Project Settings → General**.
+4. Deploy.
 
-Two things specific to this stack worth knowing before you deploy:
-- Every route that touches embeddings or the LLM call sets `export const runtime = "nodejs"` — required, since `@xenova/transformers` needs Node APIs and won't run on the Edge runtime.
+Things specific to this stack worth knowing before you deploy:
+- Every route that touches embeddings or the LLM call sets `export const runtime = "nodejs"` — required, since `@huggingface/transformers` needs Node APIs and won't run on the Edge runtime.
+- The embedding pipeline is pinned to `device: "cpu"` in `lib/hmem/embeddings.ts` — there's no GPU on Vercel's Node runtime, so this skips the library's WebGPU auto-detection rather than relying on it to fall back correctly.
+- Dynamic route params (`params` in the two `[id]` route handlers) are typed as a `Promise` and awaited — this has been required since Next.js 15 and remains true in 16; a plain synchronous `params` object will throw.
 - `maxDuration` is set to 60s on the turn and promote routes to give the embedding pipeline and streaming completion room to run. If your Vercel plan caps function duration lower than that, either upgrade or reduce `TIER2_TOP_K` / regression-set size in `lib/hmem` to keep runs shorter.
+- Tailwind v4 has no `tailwind.config.ts` — design tokens live in `app/globals.css` under `@theme`. If you add new colors or fonts, edit them there, not in a config file.
 
 ## Project layout
 
